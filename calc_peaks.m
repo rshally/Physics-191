@@ -38,97 +38,116 @@ end
 dt = t(2) - t(1);
 Fs = 1/dt;
 
-% Find peaks
-minD = .9e-3; % for smallest tau of 1msec
-minH = 0.5;
+% Find peaks for T2
+if strcmp(T,'T2')
+    % Determine smallest tau
+    switch filename
+        case 'T2_0914_CP_LMO.csv'
+            minD = 0.9e-3;
+            minH = 0.75;
 
-% Pad with a zero at the end
-V(end+1) = 0;
-t(end+1) = t(end) + dt;
-[pks, locs] = findpeaks(V, t, 'MinPeakDistance', minD, 'MinPeakHeight', minH);
+        case 'T2_0914_MG_LMO.csv'
+            minD = 0.9e-3;
+            minH = 0.75;
 
-% First peak at t = 0 + tau
-tau_1 = 1e-4; % First pulse tau (i.e. this long has passed before first peak)
-[~, t0idx] = min(abs(t - (locs(1) - tau_1)));
-locs = locs - t(t0idx);
-t = t - t(t0idx);
+        case 'T2_0921_MG_Fluor_tau1.csv'
+            minD = 2*0.4e-3;
+            minH = 0.3;
 
+        case 'T2_0921_MG_Fluor_tau2.csv'
+            minD = 2*0.8e-3;
+            minH = 0.3;
 
-%% Step 3: Use the exponential to calculate T1 or T2
-% Show shifted peaks
+        otherwise
+            minD = 4.4e-3; % for smallest tau of 1msec
+            minH = 0.75;
+    end
 
-% Fitting based on T1 or T2 measurement
-switch T
-    case 'T1' % T1 Calculation
-        
-        switch filename
-            case 'T1_0914_D_LMO'
-                flip_t = 0.0325;
-            otherwise
-                flip_t = 0;
-        end
-                
-        % Flip values at t<flip_t
-        V(t<flip_t) = -1*V(t<flip_t);
-        pks(locs<flip_t) = -1*pks(locs<flip_t);
-        
-        % Generating Fit
-        ft = fittype('a*(1-2*exp(b*x))');
-        f = fit(locs, pks, ft);
-        
-        % Plotting fit
-        % Plotting voltage function with peaks
-        figure
-        plot(f,locs,pks)
-        hold on
-        plot(t,V)
-        title('Voltage Plot with Peak Voltages Identified')
-        xlabel('time (s)')
-        ylabel('Voltage (V)')
-        
-        % Calculating T1
-        T1 = 1/f.b;
-        fprintf('T1 = %.4f sec\n',T1)
-        
-    case 'T2' % T2 Calculation
-        % Manually setting the zero point
-        zero_V = pks(end);
-        V = V - zero_V;
-        pks = pks - zero_V;
-        
-        % Skipping odd/even
-        switch filename
-            case 'T2_0914_MG_LMO.csv'
-                pks(2:2:end) = [];
-                locs(2:2:end) = [];
-            otherwise
-                % Do Nothing
-        end
-        
-        % Eliminate the first peak
-        pks(1) = [];
-        locs(1) = [];
-        
-        % Generating Fit
-        ft = fittype('a*exp(b*x)');
-        f = fit(locs, pks, ft);
-        
-        % Plotting voltage function with peaks
-        figure
-        plot(f,locs,pks)
-        hold on
-        plot(t,V)
-        title('Voltage Plot with Peak Voltages Identified')
-        xlabel('time (s)')
-        ylabel('Voltage (V)')
-
-        % Calculate T2 Value
-        T2 = 1/f.b;
-        fprintf('T2 = %.4f sec\n',T2)
+    
+    % Pad with a zero at the end
+    V(end+1) = 0;
+    t(end+1) = t(end) + dt;
+    [pks, locs] = findpeaks(V, t, 'MinPeakDistance', minD, 'MinPeakHeight', minH);
+    
+    % First peak at t = 0 + tau
+    tau_1 = 1e-4; % First pulse tau (i.e. this long has passed before first peak)
+    [~, t0idx] = min(abs(t - (locs(1) - tau_1)));
+    locs = locs - t(t0idx);
+    t = t - t(t0idx);
+else
+    pks = V;
+    locs = t;
 end
-
-
-
+    
+    
+    %% Step 3: Use the exponential to calculate T1 or T2
+    % Show shifted peaks
+    
+    % Fitting based on T1 or T2 measurement
+    switch T
+        case 'T1' % T1 Calculation
+            % Manually setting the zero point
+            V = V - min(V);
+            flip_t = t(V==0);
+            
+            % Flip values at t<flip_t
+            V(t<flip_t) = -1*V(t<flip_t);
+            
+            % Generating Fit
+            ft = fittype('a*(1-2*exp(b*x))');
+            f = fit(t', V', ft, 'StartPoint',[1 -1]);
+            
+            % Plotting fit
+            % Plotting voltage function with peaks
+            figure
+            plot(f,t,V)
+            title('Voltage Plot with Peak Voltages Identified')
+            xlabel('time (s)')
+            ylabel('Voltage (V)')
+            
+            % Calculating T1
+            T1 = 1/f.b;
+            fprintf('T1 = %.4f sec\n',T1)
+            
+        case 'T2' % T2 Calculation
+            % Manually setting the zero point
+            zero_V = pks(end);
+            V = V - zero_V;
+            pks = pks - zero_V;
+            
+            % Skipping odd/even
+            switch filename
+                case 'T2_0914_MG_LMO.csv'
+                    pks(2:2:end) = [];
+                    locs(2:2:end) = [];
+                otherwise
+                    % Do Nothing
+            end
+            
+            % Eliminate the first peak
+            pks(1) = [];
+            locs(1) = [];
+            
+            % Generating Fit
+            ft = fittype('a*exp(b*x)');
+            f = fit(locs, pks, ft, 'StartPoint',[1 -1]);
+            
+            % Plotting voltage function with peaks
+            figure
+            plot(f,locs,pks)
+            hold on
+            plot(t,V)
+            title('Voltage Plot with Peak Voltages Identified')
+            xlabel('time (s)')
+            ylabel('Voltage (V)')
+            
+            % Calculate T2 Value
+            T2 = 1/f.b;
+            fprintf('T2 = %.4f sec\n',T2)
+    end
+    
+    
+    
 end
 
 

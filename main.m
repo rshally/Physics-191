@@ -8,11 +8,11 @@ filename = [];
 %%%%%%%%%%%%
 % First: LMO Data
 % 1a - T1
-% filename{1} = 'T1_0914_D_LMO';
-% % 1b - T2 CP
-% filename{end+1} = 'T2_0914_CP_LMO.csv';
+filename{1} = 'T1_0914_D_LMO';
+% 1b - T2 CP
+filename{end+1} = 'T2_0914_CP_LMO.csv';
 % 1b - T2 MG
-% filename{end+1} = 'T2_0914_MG_LMO.csv';
+filename{end+1} = 'T2_0914_MG_LMO.csv';
 
 %%%%%%%%%%%%
 % Second: Distilled Water
@@ -27,7 +27,7 @@ filename{end+1} = 'T2_0919_MG_H2O_tau2.csv';
 % Third: Fluorine
 % 3a - Frequency
 filename{end+1} = 'T2_0921_S_Fluor.csv';
-% 3b - T1
+% % 3b - T1
 filename{end+1} = 'T1_0921_D_Fluor';
 % 3c - T2, tau = 
 filename{end+1} = 'T2_0921_MG_Fluor_tau1.csv';
@@ -46,4 +46,5 @@ for n = 1:length(filename)
         otherwise
             [locs,pks,f] = calc_peaks(filename{n}, pathname);
     end
+    pause(2)
 end
