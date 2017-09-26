@@ -27,7 +27,7 @@ sample = C{4};
 
 
 %% Reading in file
-if isdir(filename)
+if isdir(['All Data/',filename])
     number = 'multi';
 else
     number = 'single';
@@ -41,6 +41,10 @@ Fs = 1/dt;
 % Find peaks
 minD = .9e-3; % for smallest tau of 1msec
 minH = 0.5;
+
+% Pad with a zero at the end
+V(end+1) = 0;
+t(end+1) = t(end) + dt;
 [pks, locs] = findpeaks(V, t, 'MinPeakDistance', minD, 'MinPeakHeight', minH);
 
 % First peak at t = 0 + tau
@@ -51,31 +55,57 @@ t = t - t(t0idx);
 
 
 %% Step 3: Use the exponential to calculate T1 or T2
-switch T
-    case 'T1' % Case 1: Calculate T1
-        T1 = 1/f.b;
-        fprintf('T1 = %.4f sec\n',T1)
-    case 'T2' % Case 2: Calculate T2
-        T2 = 1/f.b;
-        fprintf('T2 = %.4f sec\n',T2)
-end
-
+% Show shifted peaks
 
 % Fitting based on T1 or T2 measurement
 switch T
     case 'T1' % T1 Calculation
-        % Calculate exponential fit and plot on top
-        fops = fitoptions;
-        ft = fittype('a*abs(1-2*exp(b*x))');
-        f = fit(ttot, yupper, ft);
-        plot(f)
+        
+        switch filename
+            case 'T1_0914_D_LMO'
+                flip_t = 0.0325;
+            otherwise
+                flip_t = 0;
+        end
+                
+        % Flip values at t<flip_t
+        V(t<flip_t) = -1*V(t<flip_t);
+        pks(locs<flip_t) = -1*pks(locs<flip_t);
+        
+        % Generating Fit
+        ft = fittype('a*(1-2*exp(b*x))');
+        f = fit(locs, pks, ft);
+        
+        % Plotting fit
+        % Plotting voltage function with peaks
+        figure
+        plot(f,locs,pks)
+        hold on
+        plot(t,V)
+        title('Voltage Plot with Peak Voltages Identified')
+        xlabel('time (s)')
+        ylabel('Voltage (V)')
+        
+        % Calculating T1
         T1 = 1/f.b;
         fprintf('T1 = %.4f sec\n',T1)
-    case 'T2' % T2 Calculation
         
-        % Throw away certain peaks
-        % % %         pks(2:2:end) = [];
-        % % %         locs(2:2:end) = [];
+    case 'T2' % T2 Calculation
+        % Manually setting the zero point
+        zero_V = pks(end);
+        V = V - zero_V;
+        pks = pks - zero_V;
+        
+        % Skipping odd/even
+        switch filename
+            case 'T2_0914_MG_LMO.csv'
+                pks(2:2:end) = [];
+                locs(2:2:end) = [];
+            otherwise
+                % Do Nothing
+        end
+        
+        % Eliminate the first peak
         pks(1) = [];
         locs(1) = [];
         
