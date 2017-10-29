@@ -1,7 +1,11 @@
-function [t,V] = read_data(filename, pathname, method)
+function [t, V, varargout] = read_data(filename, pathname, method)
 
 % Reads in tau value file
-tau_data = xlsread('tau_values.xlsx');
+[tau_data_num, tau_data_text, tau_data_raw] = xlsread('tau_values.xlsx');
+
+% Initialize varargout
+varargout{1} = [];
+varargout{2} = [];
 
 % Reads in data
 switch method
@@ -12,6 +16,15 @@ switch method
         
         % Determine domain manually and save this selection value
         [~, name, ~] = fileparts(filename);
+        
+        % Extract tau value for single experiments
+        tau_val = tau_data_num(find(strcmp(tau_data_text(:,2), regexprep(filename,'.csv',''))) - 1, 1);
+        num_B = tau_data_num(find(strcmp(tau_data_text(:,2), regexprep(filename,'.csv',''))) - 1, 3);
+        
+        % Set this as optional outputs
+        varargout{1} = tau_val;
+        varargout{2} = num_B;
+        
     case 'multi' % For discrete pulses
         % Split path name by '/' and choose last one
         name = filename;
@@ -31,7 +44,9 @@ switch method
             % tau
             str_idx = strfind(fnames{n},'tek');
             num = str2double(fnames{n}((str_idx+3):(str_idx+6)));
-            tau_val = tau_data(tau_data(:,2)==num,1)/1000;
+            
+            % Extract tau value
+            tau_val = tau_data_num(tau_data_num(:,2)==num,1)/1000;
             
             M(M(:,2)==inf,2)=0;
             

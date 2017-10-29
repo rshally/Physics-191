@@ -1,3 +1,7 @@
 
 *.csv
 *.mat
+*.eps
+*.xlsx
+*.jpg
+*.pdf
