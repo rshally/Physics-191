@@ -1,11 +1,16 @@
-function T_fun = germ_resis(data_folder)
-% Returns the temperature dependence on voltage over the germanium resistor
+function [I, T_fun_log] = germ_resis(data_folder)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Returns the temperature dependence on resistance of the germanium resistor
+% Inputs: - datafolder
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Load in data for P and V
 PVdata = dlmread(fullfile(data_folder,'Ge_Resistor.txt'));
 % col 1: Pressure
 % col 2: Voltage
 
+% Convert P to T
+T = P_to_T(data_folder, PVdata(:,1))';
 
 % Find current applied:
 V10k = 10.257e-3;
@@ -13,20 +18,25 @@ R10k = 10e3;
 I = V10k/R10k;
 
 % Covert voltage measurement to resistance:
-Resis = PVdata(:,2)/I;
+R = PVdata(:,2)/I;
 
-% Create Model --> 1/T model
-ft = fittype('a/x + b');
-[f, gof] = fit(PVdata(:,1),Resis,ft);
+% Create Polynomial fit according to White P. 111
+m = round(size(PVdata,1)/4);
+T_fun_log = polyfit(log(R),log(T),m);
 
-% Plot P vs. V with fit
+% Evaluate polynomial fit:
+R_vals = linspace(min(R), max(R), 1000);
+T_vals = exp(polyval(T_fun_log,log(R_vals)));
+
+% Plot T vs. R with fit
 figure
-plot(PVdata(:,1), PVdata(:,2),'bo')
+plot(R/1000, T,'bo')
 hold on
-plot(f,'r')
-title('Voltage of Ge Resistor over Pressures')
-xlabel('Pressure (mmHg)')
-ylabel('Voltage over Ge Resistor (V)')
+plot(R_vals/1000, T_vals,'r')
+xlim([0, max(R/1000)])
+title('Resistance vs. Temperature')
+xlabel('Resistance of Ge Resistor (kilo-Ohms)')
+ylabel('Temperature (K)')
 legend('Data','Fit')
 
 %%%% Need to do:
