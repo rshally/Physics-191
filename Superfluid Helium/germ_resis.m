@@ -34,10 +34,15 @@ plot(R/1000, T,'bo')
 hold on
 plot(R_vals/1000, T_vals,'r')
 xlim([0, max(R/1000)])
-title('Resistance vs. Temperature')
-xlabel('Resistance of Ge Resistor (kilo-Ohms)')
-ylabel('Temperature (K)')
-legend('Data','Fit')
+title('Germanium Resistor Calibration Conversion')
+xlabel('Resistance of Ge Resistor [\Omega]')
+ylabel('Temperature [K]')
+
+fig_file = 'Saved_Figures/germ_T_R.eps';
+saveas(gcf, fig_file, 'epsc')
+fig_file = 'Saved_Figures/JPEG/germ_T_R.jpeg';
+saveas(gcf, fig_file, 'jpeg')
+
 
 %%%% Need to do:
 % 1. Determine relationship between pressure and temperature of the helium gas

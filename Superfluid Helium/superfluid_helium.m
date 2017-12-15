@@ -1,4 +1,10 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Main file to perform superfluid helium calculations
+set(0,'defaultAxesFontSize',20)
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 data_folder = 'Superfluid Helium Data';
 
 %% Germanium Resistor Calibration
@@ -10,19 +16,21 @@ data_folder = 'Superfluid Helium Data';
 [hc_data_addendum, addendum_model, Td] = heat_cap(data_folder, 'addendum', T_fun_log, I);
 hc_data_full = heat_cap(data_folder, 'heat_cap', T_fun_log, I);
 
+% Extract only helium component
+hc_data_He = hc_he_extract(hc_data_full, addendum_model);
+
 % Calculate lambda point and plot combination of HC data for He
-lambda = calc_lambdas(hc_data_full, addendum_model);
+[lambda] = calc_lambdas(hc_data_He);
 
-% Compute the mass of gas in chamber: PV = nRT
-R = 0.082057; % L atm mol^-1 K^-1
-Troom = 298; % K
-P1 = .2 * 0.068046; % psi to atm
-P2 = -10 * 0.0334211; % inches Hg to atm
-delN = (P1 - P2)/(R*Troom);
-massHe = delN * 4; % convert moles to grams
+% Plot the heat capacity data along with models:
+plot_hc_data(lambda, hc_data_He)
 
-% Convert heat capacity to specific heat
-
+% Copper model:
+A0 = 0.69142;
+A1 = 0.047807;
+A2 = 2.9721*10^-6;
+A3 = 8.9189*10^-8;
+coeff = [A3, 0, A2, 0, A1, 0, A0, 0];
 
 
 

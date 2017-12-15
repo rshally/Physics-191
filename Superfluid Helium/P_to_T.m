@@ -10,6 +10,9 @@ PTdata = csvread(fullfile(data_folder,'He_P_to_T.csv'));
 ft = fittype('a/x + b*log(x) + c');
 [f, gof] = fit(PTdata(:,2), log(PTdata(:,1)), ft, 'StartPoint',[-10 1, 4] );
 
+% % figure
+% % plot(f, PTdata(:,2), log(PTdata(:,1)))
+
 % Determine T value for given P value
 T = zeros(1, length(P_data));
 for n = 1:length(P_data)

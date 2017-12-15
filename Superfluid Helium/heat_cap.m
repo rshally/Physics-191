@@ -11,7 +11,7 @@ function [hc_data, varargout] = heat_cap(data_folder, data_type, T_fun_log, I)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
-% Determine threshold characteristics based on type input
+%% Determine threshold characteristics based on type input
 switch data_type
     case 'addendum'
         criteria_len = 5;
@@ -23,16 +23,21 @@ switch data_type
         error('Incorrect file name input')
 end
 
+% Zero-point pressures (do we need these?)
+large_gauge = 8; %mmHg
+small_gauge = 0; %mmHg
+
 % Calculate Resistance of the heater
 Rcurrent = [1249.1, 132.75];
 Rvoltage = [1249.6, 133.02];
-Rheater = 1000; % How do I do this?????
+Rheater = mean(-[diff(Rcurrent), diff(Rvoltage)]);
 
 % Load data on pulse power transmitted
 [num, txt, raw] = xlsread(fullfile(data_folder, 'pulse_power_data.xlsx'));
 
-% Loop through all of the data file names:
+%% Loop through all of the data file names:
 fnames = dir(fullfile(data_folder, [data_type,'*.txt']));
+f = figure;
 for n = 1:length(fnames)
     name = fnames(n).name;
     % Load Data
@@ -66,8 +71,11 @@ for n = 1:length(fnames)
 
     % Plot the step functions with circles at pre-jump locations
     figure
+    %subplot(1,length(fnames),n)
     plot(time, T_vals,'b', time(jump_idx), T_vals(jump_idx), 'ro')
-    title(sprintf('Temperature vs. Time\nFile: %s',name), 'Interpreter', 'none')
+    title('Temperature Change Given Heat Pulse')
+    xlabel('Time (s)')
+    ylabel('Temperature (K)')
     
     % Take the differences between adjacent points for temperature steps
     T_steps = diff(T_vals(jump_idx));
@@ -102,50 +110,75 @@ for n = 1:length(fnames)
     T_steps = reshape(T_steps, [], 1);
     Ts{n,1} = T_vals(jump_idx(2:end));
     C{n,1} = E(2:end)./T_steps; 
-    
-    % Plot heat capacity data (full)
-    figure
-    plot(Ts{n}, C{n})
-    title('Heat Capacity Versus Temperature')
-    xlabel('T [K]')
-    ylabel('C [J/K]')
-    
 end
 
-
-% For the addendum, create a model and calculate Debye temperature
+%% For the addendum, create a model
 if strcmp(data_type, 'addendum')
     massAd = 14.8; %grams
     molesCu = massAd/63.55; % grams / grams per mole
     R = 0.082057; % L atm mol^-1 K^-1
     
-    Tdeb_est = zeros(1, numel(C));
-    % Fit a model to data according to Debye theory
-    for m = 1:numel(C)
-        ft = fittype('a*x^3 + b');
-        [CvDeb{m}, gof] = fit(Ts{m}, C{m}, ft,'StartPoint',[0,0]);
-        
-        % Calculate Debye Temperature estimate for carbon from this data
-        Tdeb_est(m) = (molesCu*R*12*pi^4/(5*CvDeb{m}.a))^(1/3);
-    end
-    % Plot both models and the data
-    figure
-    p1 = plot(CvDeb{1}, 'b', Ts{1}, C{1}, 'bo');
-    set(p1, 'LineWidth',2)
+% % % %     % Fit a model to data according to the paper
+% % % %     for m = 1:numel(C)
+% % % %         % Compute my own model based on the structure
+% % % %         ft = fittype('A1*x + A2*x^3 + A3*x^5 + A4*x^7 + A5*x^9 + A6*x^11');
+% % % %         [Cp{m}, gof1] = fit(Ts{m}, C{m}, ft,'StartPoint',[0,0,0,0,0,0]);
+% % % %         [Cp_specific{m}, gof2] = fit(Ts{m}, C{m}/molesCu, ft,'StartPoint',[0,0,0,0,0,0]);
+% % % % 
+% % % %         
+% % % %         % Compare this model to the model theorized in the papers
+% % % %         A1 = 6.9434e-1;
+% % % %         A2 = 4.7548e-2;
+% % % %         A3 = 1.6314e-6;
+% % % %         A4 = 9.4786e-8;
+% % % %         A5 = -1.3639e-10;
+% % % %         A6 = 5.3898e-14;
+% % % %         coeff = [A6, 0, A5, 0, A4, 0, A3, 0, A2, 0, A1, 0];
+% % % %         Cp_predicted{m} = 1/1000 * polyval(coeff, Ts{m});
+% % % %     end
+    
+    % Create one model for both sets of data:
+    ft = fittype('A1*x + A2*x^3 + A3*x^5 + A4*x^7 + A5*x^9 + A6*x^11');
+    [Cp_all_model, gof2] = fit(vertcat(Ts{:}), vertcat(C{:}), ft,'StartPoint',[0,0,0,0,0,0]);
+
+    % Plotting models on top of HC data
+    h = figure;
+    h1 = plot(Ts{1}, C{1}, 'bo', Ts{2}, C{2}, 'ro');
     hold on
-    p2 = plot(CvDeb{2}, 'r', Ts{2}, C{2}, 'ro');
-    set(p2, 'LineWidth',2)
-    title('Addendum Heat Capacity Plot')
+    h2 = plot(Cp_all_model, 'predfunc', .95);
+    set(h2, 'LineWidth', 1.5)
+    set(h2, 'color', 'k')
+    hold on
+    legend('Trial 1', 'Trial 2', 'Non-Linear Model')
+    title('Heat Capacity of Cu Addendum')
     xlabel('T [K]')
     ylabel('C [J/K]')
+
+    % Save Figure:
+    fig_file = 'Saved_Figures/HC_Cu_Fit.eps';
+    saveas(gcf, fig_file,'epsc')
+    fig_file = 'Saved_Figures/JPEG/HC_Cu_Fit.jpeg';
+    saveas(gcf, fig_file,'jpeg')
+
+% % % %     % Plot both models and the data
+% % % %     figure
+% % % %     p1 = plot(Cp{1}, 'b', Ts{1}, C{1}, 'bo');
+% % % %     set(p1, 'LineWidth',2)
+% % % %     hold on
+% % % %     p2 = plot(Cp{2}, 'r', Ts{2}, C{2}, 'ro');
+% % % %     set(p2, 'LineWidth',2)
+% % % %     title('Addendum Heat Capacity Plot')
+% % % %     xlabel('T [K]')
+% % % %     ylabel('C [J/K]')
+% % % %     legend('Trial 1','Non-Linear Model', 'Trial 2', 'Non-Linear Model')
+    
     
     % Pass output parameters
-    varargout{1} = CvDeb;
-    varargout{2} = Tdeb_est;
-
+    varargout{1} = Cp_all_model;
+    varargout{2} = 0;
 end
 
-
+% Save data for output
 hc_data.C = C;
 hc_data.T = Ts;
 
